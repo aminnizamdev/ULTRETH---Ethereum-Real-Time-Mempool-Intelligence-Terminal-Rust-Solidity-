@@ -1,0 +1,39 @@
+[package]
+name = "ultreth"
+version = "0.1.0"
+edition = "2021"
+authors = ["ULTRETH Team"]
+description = "A powerful Ethereum node CLI program for high-speed transaction monitoring"
+
+[dependencies]
+tokio = { version = "1.28", features = ["full"] }
+web3 = "0.18.0"
+clap = { version = "4.3", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+log = "0.4"
+env_logger = "0.10"
+ctrlc = "3.2"
+chrono = "0.4"
+colored = "2.0"
+tui = "0.19"
+crossterm = "0.26"
+thiserror = "1.0"
+backoff = "0.4"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+ethers = "2.0"
+ethers-providers = "2.0"
+ethers-core = "2.0"
+ethers-contract = "2.0"
+rust_decimal = "1.30"
+num-bigint = "0.4"
+num-traits = "0.2"
+rayon = "1.7"
+url = "2.4"
+once_cell = "1.18"
+regex = "1.9"
+base64 = "0.21"
+hex = "0.4"
+sha3 = "0.10"
