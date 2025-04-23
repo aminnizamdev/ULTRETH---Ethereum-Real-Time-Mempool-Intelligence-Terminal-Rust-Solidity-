@@ -5,7 +5,26 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 
-/// Connect to an Ethereum node using the provided endpoint URL
+/// Helper function to extract error code from Ethereum JSON-RPC errors
+fn get_error_code(error: &impl std::fmt::Display) -> Option<i32> {
+    let error_str = error.to_string();
+    
+    // Look for error code pattern in the error message
+    if let Some(code_start) = error_str.find("code: -") {
+        let code_substr = &error_str[code_start + 6..];
+        if let Some(code_end) = code_substr.find(',') {
+            let code_str = &code_substr[..code_end];
+            return code_str.parse::<i32>().ok();
+        } else if let Some(code_end) = code_substr.find(')') {
+            let code_str = &code_substr[..code_end];
+            return code_str.parse::<i32>().ok();
+        }
+    }
+    
+    None
+}
+
+/// Connect to an Ethereum node using the provided endpoint URL with retry mechanism
 pub async fn connect_to_node(endpoint: &str) -> Result<Provider<Http>, Box<dyn std::error::Error>> {
     // Create provider with error handling for invalid URLs
     let provider = match Provider::<Http>::try_from(endpoint) {
@@ -16,23 +35,70 @@ pub async fn connect_to_node(endpoint: &str) -> Result<Provider<Http>, Box<dyn s
         }
     };
     
-    // Test connection by getting the current block number with timeout
-    match tokio::time::timeout(Duration::from_secs(5), provider.get_block_number()).await {
-        Ok(block_result) => {
-            match block_result {
-                Ok(block_number) => {
-                    info!("Connected to Ethereum node. Current block: {}", block_number);
-                    Ok(provider)
-                },
-                Err(e) => {
-                    error!("Failed to connect to Ethereum node: {}", e);
-                    Err(Box::new(e))
+    // Retry parameters
+    let max_retries = 3;
+    let mut retry_count = 0;
+    let retry_delay = Duration::from_millis(500);
+    
+    // Attempt connection with retries
+    loop {
+        // Test connection by getting the current block number with timeout
+        match tokio::time::timeout(Duration::from_secs(5), provider.get_block_number()).await {
+            Ok(block_result) => {
+                match block_result {
+                    Ok(block_number) => {
+                        info!("Connected to Ethereum node. Current block: {}", block_number);
+                        return Ok(provider);
+                    },
+                    Err(e) => {
+                        // Check for specific error codes
+                        if let Some(error_code) = get_error_code(&e) {
+                            match error_code {
+                                -32046 => {
+                                    warn!("Connection attempt {}/{}: Cannot fulfill request (code: -32046). This endpoint may be rate-limited or unavailable.", 
+                                        retry_count + 1, max_retries);
+                                },
+                                -32601 => {
+                                    error!("Failed to connect to Ethereum node: Method not found (code: -32601). The endpoint may not support the required RPC methods.");
+                                    // Don't retry for method not found errors
+                                    return Err(Box::new(e));
+                                },
+                                _ => {
+                                    warn!("Connection attempt {}/{} failed: {}", retry_count + 1, max_retries, e);
+                                }
+                            }
+                        } else {
+                            warn!("Connection attempt {}/{} failed: {}", retry_count + 1, max_retries, e);
+                        }
+                        
+                        // Check if we should retry
+                        retry_count += 1;
+                        if retry_count >= max_retries {
+                            error!("Failed to connect to Ethereum node after {} attempts: {}", max_retries, e);
+                            return Err(Box::new(e));
+                        }
+                        
+                        // Wait before retrying
+                        info!("Retrying connection in {:?}...", retry_delay);
+                        sleep(retry_delay).await;
+                    }
                 }
+            },
+            Err(_) => {
+                warn!("Connection attempt {}/{}: Timeout - Node is unreachable or not responding", 
+                    retry_count + 1, max_retries);
+                
+                // Check if we should retry
+                retry_count += 1;
+                if retry_count >= max_retries {
+                    error!("Connection timeout after {} attempts: Ethereum node is unreachable or not responding", max_retries);
+                    return Err("Connection timeout: Ethereum node is unreachable or not responding".into());
+                }
+                
+                // Wait before retrying
+                info!("Retrying connection in {:?}...", retry_delay);
+                sleep(retry_delay).await;
             }
-        },
-        Err(_) => {
-            error!("Connection timeout: Node is unreachable or not responding");
-            Err("Connection timeout: Ethereum node is unreachable or not responding".into())
         }
     }
 }
@@ -150,6 +216,7 @@ pub async fn subscribe_to_blocks(
 }
 
 /// Get detailed transaction information including receipt
+#[allow(dead_code)]
 pub async fn get_transaction_details(
     provider: &Provider<Http>,
     tx_hash: H256,
@@ -163,6 +230,7 @@ pub async fn get_transaction_details(
 }
 
 /// Get contract ABI for a verified contract
+#[allow(dead_code)]
 pub async fn get_contract_abi(
     _provider: &Provider<Http>,
     _contract_address: Address,
@@ -176,6 +244,7 @@ pub async fn get_contract_abi(
 }
 
 /// Decode transaction input data using contract ABI
+#[allow(dead_code)]
 pub fn decode_transaction_input(
     tx: &Transaction,
     abi: &ethers::abi::Abi,

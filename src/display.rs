@@ -124,6 +124,7 @@ fn decode_function_signature(input: &Bytes) -> String {
 }
 
 /// Format a block for display in the terminal
+#[allow(dead_code)]
 pub fn format_block(block: &Block<TxHash>) -> String {
     let mut output = String::new();
     

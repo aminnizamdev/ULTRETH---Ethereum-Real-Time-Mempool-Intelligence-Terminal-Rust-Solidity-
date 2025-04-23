@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["ULTRETH Team"]
 description = "A powerful Ethereum node CLI program for high-speed transaction monitoring"
 
+[features]
+default = []
+solidity = []  # Enable Solidity contract compilation and integration
+
 [dependencies]
 tokio = { version = "1.28", features = ["full"] }
 web3 = "0.18.0"

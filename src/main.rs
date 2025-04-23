@@ -17,7 +17,7 @@ use utils::{setup_logger, calculate_query_rate};
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Ethereum node endpoint URL
-    #[arg(short, long, default_value = "http://localhost:8545")]
+    #[arg(short, long, default_value = "https://rpc.ankr.com/eth")]
     endpoint: String,
 
     /// Maximum queries per second
@@ -58,18 +58,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if cli.list_endpoints {
         println!("{}", "Available Public Ethereum Endpoints".bright_green().bold());
         println!("{}", "----------------------------------------".bright_green());
-        println!("{}", "1. Infura (requires API key):".yellow());
-        println!("   https://mainnet.infura.io/v3/YOUR-API-KEY");
-        println!("{}", "2. Alchemy (requires API key):".yellow());
-        println!("   https://eth-mainnet.g.alchemy.com/v2/YOUR-API-KEY");
-        println!("{}", "3. Ankr Public Endpoint:".yellow());
-        println!("   https://rpc.ankr.com/eth");
-        println!("{}", "4. Cloudflare Ethereum Gateway:".yellow());
-        println!("   https://cloudflare-eth.com");
-        println!("{}", "5. QuickNode Public Endpoint:".yellow());
-        println!("   https://endpoints.omniatech.io/v1/eth/mainnet/public");
+        println!("{}", "Recommended Public Endpoints (No API Key Required):".yellow().bold());
+        println!("{}", "1. Ankr Public Endpoint:".yellow());
+        println!("   {} (Higher rate limits, recommended)", "https://rpc.ankr.com/eth".bright_green());
+        println!("{}", "2. QuickNode Public Endpoint:".yellow());
+        println!("   {}", "https://endpoints.omniatech.io/v1/eth/mainnet/public".bright_green());
+        println!("{}", "3. Cloudflare Ethereum Gateway:".yellow());
+        println!("   {} (May have stricter rate limits)", "https://cloudflare-eth.com".bright_green());
         println!();
-        println!("Example usage: ultreth -e https://rpc.ankr.com/eth");
+        println!("{}", "Premium Endpoints (API Key Required):".yellow().bold());
+        println!("{}", "4. Infura (requires API key):".yellow());
+        println!("   https://mainnet.infura.io/v3/YOUR-API-KEY");
+        println!("{}", "5. Alchemy (requires API key):".yellow());
+        println!("   https://eth-mainnet.g.alchemy.com/v2/YOUR-API-KEY");
+        println!();
+        println!("{}", "Rate Limit Information:".cyan().bold());
+        println!("- Public endpoints typically have rate limits (5-30 requests/second)");
+        println!("- For higher throughput, consider using a premium service with an API key");
+        println!("- Adjust the rate limit with -r option (e.g., -r 10 for 10 queries/second)");
+        println!();
+        println!("Example usage: {} {}", "ultreth -e".bright_cyan(), "https://rpc.ankr.com/eth".bright_green());
         return Ok(());
     }
     
@@ -86,12 +94,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("{}", "\nTroubleshooting suggestions:".bright_yellow());
             eprintln!("1. Check if your Ethereum node is running at the specified endpoint");
             eprintln!("2. Verify network connectivity and firewall settings");
-            eprintln!("3. Try one of these public Ethereum endpoints instead:");
-            eprintln!("   - Ankr: https://rpc.ankr.com/eth");
-            eprintln!("   - Cloudflare: https://cloudflare-eth.com");
-            eprintln!("   - QuickNode: https://endpoints.omniatech.io/v1/eth/mainnet/public");
-            eprintln!("\nTip: Run 'ultreth --list-endpoints' to see all available public endpoints");
-            eprintln!("Example: ultreth -e https://rpc.ankr.com/eth");
+            eprintln!("3. Some public endpoints may have rate limits or require API keys");
+            eprintln!("4. Try one of these alternative public Ethereum endpoints:");
+            eprintln!("   - Ankr: {}", "https://rpc.ankr.com/eth".bright_green());
+            eprintln!("   - QuickNode: {}", "https://endpoints.omniatech.io/v1/eth/mainnet/public".bright_green());
+            eprintln!("   - Cloudflare: {}", "https://cloudflare-eth.com".bright_green());
+            eprintln!("\nTip: Run {} to see all available public endpoints", "ultreth --list-endpoints".bright_cyan());
+            eprintln!("Example: {} {}", "ultreth -e".bright_cyan(), "https://rpc.ankr.com/eth".bright_green());
+            
+            // Check if the error contains specific error codes and provide targeted advice
+            let error_str = e.to_string();
+            if error_str.contains("-32046") || error_str.contains("Cannot fulfill request") {
+                eprintln!("{}", "\nSpecific Error Information:".bright_yellow());
+                eprintln!("The error code -32046 (Cannot fulfill request) typically indicates:");
+                eprintln!("- The endpoint is rate-limited and you've exceeded the allowed requests");
+                eprintln!("- The endpoint may require an API key for the requested method");
+                eprintln!("- The endpoint may be temporarily unavailable");
+                eprintln!("\nRecommendation: Try using Ankr's public endpoint which has higher rate limits");
+            }
             return Err(e);
         }
     };

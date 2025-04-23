@@ -29,6 +29,7 @@ pub fn calculate_query_rate(tx_count: usize, elapsed: Duration) -> f64 {
 }
 
 /// Format a large number with commas for better readability
+#[allow(dead_code)]
 pub fn format_number(num: u64) -> String {
     let num_str = num.to_string();
     let mut result = String::new();
@@ -45,6 +46,7 @@ pub fn format_number(num: u64) -> String {
 }
 
 /// Convert a hex string to a readable address format
+#[allow(dead_code)]
 pub fn format_address(address: &str) -> String {
     if address.len() < 10 {
         return address.to_string();
@@ -55,6 +57,7 @@ pub fn format_address(address: &str) -> String {
 }
 
 /// Helper function to truncate strings that are too long
+#[allow(dead_code)]
 pub fn truncate_string(s: &str, max_len: usize) -> String {
     if s.len() <= max_len {
         s.to_string()
@@ -64,6 +67,7 @@ pub fn truncate_string(s: &str, max_len: usize) -> String {
 }
 
 /// Create a progress bar string
+#[allow(dead_code)]
 pub fn progress_bar(percentage: f64, width: usize) -> String {
     let fill_width = (percentage * width as f64 / 100.0).round() as usize;
     let empty_width = width - fill_width;
